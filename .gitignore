@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Environment & local state
+.env
+.env.local
+.inkforge/
+*.db
+*.sqlite
+*.sqlite3
+exports/
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/

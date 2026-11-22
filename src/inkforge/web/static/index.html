@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>墨铸 InkForge · 去AI味多题材小说工作室</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <!-- Top Editorial Press Bar -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-seal" aria-hidden="true">墨</span>
+      <div class="brand-text">
+        <strong class="brand-name">墨铸 InkForge</strong>
+        <span class="brand-sub">多题材小说创作与去AI味审校台</span>
+      </div>
+    </div>
+
+    <div class="topbar-center">
+      <div class="mode-tabs" role="tablist" aria-label="工作区切换">
+        <button class="tab-btn active" data-view="manuscript" role="tab">正文稿纸</button>
+        <button class="tab-btn" data-view="bible" role="tab">故事圣经</button>
+        <button class="tab-btn" data-view="tool" role="tab">独立文本去AI体检</button>
+      </div>
+    </div>
+
+    <div class="topbar-actions">
+      <button id="btn-settings" class="btn btn-ghost" title="切换 DeepSeek / 豆包 / 通义千问 / OpenAI / 本地演示">
+        <span class="status-dot" id="provider-dot"></span>
+        <span id="provider-label">加载中…</span>
+      </button>
+      <div class="dropdown" id="export-dropdown">
+        <button id="btn-export-toggle" class="btn btn-outline">导出成书</button>
+        <div class="dropdown-menu" id="export-menu">
+          <button data-fmt="epub">导出标准 EPUB3 电子书</button>
+          <button data-fmt="html">导出独立排版 HTML 阅读器</button>
+          <button data-fmt="md">导出 Markdown 稿件</button>
+          <button data-fmt="txt">导出纯文本 TXT</button>
+        </div>
+      </div>
+      <button id="btn-new-project" class="btn btn-primary">新建小说</button>
+    </div>
+  </header>
+
+  <!-- Main 3-Column Workbench -->
+  <div class="workspace">
+    <!-- Left Rail: Books & Chapter Navigator -->
+    <aside class="sidebar-left">
+      <section class="rail-section">
+        <div class="rail-head">
+          <h2>书目</h2>
+          <button id="btn-delete-project" class="link-danger hidden" title="删除当前书目">删除</button>
+        </div>
+        <select id="project-select" class="select-input" aria-label="选择小说项目"></select>
+        <div id="project-meta" class="project-meta"></div>
+      </section>
+
+      <section class="rail-section rail-chapters">
+        <div class="rail-head">
+          <h2>章节目录</h2>
+          <button id="btn-batch-open" class="link-action">批量生成</button>
+        </div>
+        <ul id="chapter-list" class="chapter-list"></ul>
+      </section>
+    </aside>
+
+    <!-- Center Canvas: Manuscript / Story Bible / Standalone Audit -->
+    <main class="canvas">
+      <!-- Empty Welcome State -->
+      <section id="empty-state" class="empty-sheet hidden">
+        <div class="empty-inner">
+          <h1>把小说从机器腔里捞出来</h1>
+          <p class="empty-lead">
+            墨铸为 10 种主流题材内置独立叙事蓝图、活体人物声纹卡与毫秒级红笔去AI味审校引擎。
+            无需配置 API Key，也可以立刻用内置演示引擎体验全链路。
+          </p>
+          <div class="empty-actions">
+            <button id="btn-empty-new" class="btn btn-primary btn-lg">创建第一部小说</button>
+            <button id="btn-quick-demo" class="btn btn-outline btn-lg">一键生成悬疑示例（含红笔精修对比）</button>
+          </div>
+          <div class="genre-strip" id="empty-genre-strip"></div>
+        </div>
+      </section>
+
+      <!-- View 1: Manuscript Sheet -->
+      <section id="view-manuscript" class="sheet-view hidden">
+        <div class="sheet-toolbar">
+          <div class="chapter-heading">
+            <span class="chapter-num" id="ch-num-badge">第 1 章</span>
+            <input id="ch-title-input" class="title-input" type="text" placeholder="章节标题" />
+          </div>
+          <div class="sheet-controls">
+            <div class="segmented" role="group" aria-label="稿纸视图">
+              <button class="seg-btn active" data-sheet-mode="markup">红笔审阅</button>
+              <button class="seg-btn" data-sheet-mode="edit">直接编辑</button>
+              <button class="seg-btn" data-sheet-mode="diff">精修对比</button>
+            </div>
+            <button id="btn-gen-chapter" class="btn btn-primary">执笔精工本章</button>
+            <button id="btn-polish-chapter" class="btn btn-outline">去AI味精修</button>
+            <button id="btn-save-chapter" class="btn btn-ghost">保存并体检</button>
+          </div>
+        </div>
+
+        <!-- Collapsible Scene Beats Ribbon -->
+        <details class="beats-drawer" id="beats-drawer">
+          <summary>
+            <span>本章场景分镜（Scene Beats）</span>
+            <span class="drawer-hint" id="beats-count">尚未拆解</span>
+          </summary>
+          <div class="beats-body">
+            <div class="beats-actions">
+              <button id="btn-gen-beats" class="btn btn-sm btn-outline">重新生成本章分镜</button>
+            </div>
+            <div id="beats-list" class="beats-grid"></div>
+          </div>
+        </details>
+
+        <!-- Manuscript Paper Surface -->
+        <div class="paper-container">
+          <!-- Mode A: Red-Pen Markup View -->
+          <article id="manuscript-markup" class="manuscript-paper"></article>
+
+          <!-- Mode B: Direct Text Editor -->
+          <textarea id="manuscript-editor" class="manuscript-textarea hidden" placeholder="点击上方「执笔精工本章」自动生成，或直接在此输入正文…"></textarea>
+
+          <!-- Mode C: Before/After Diff View -->
+          <div id="manuscript-diff" class="diff-split hidden">
+            <div class="diff-col">
+              <div class="diff-col-head">
+                <strong>精修前（初稿）</strong>
+                <span id="diff-before-score" class="score-pill"></span>
+              </div>
+              <div id="diff-before-body" class="diff-prose"></div>
+            </div>
+            <div class="diff-col">
+              <div class="diff-col-head">
+                <strong>精修后（当前稿）</strong>
+                <span id="diff-after-score" class="score-pill"></span>
+              </div>
+              <div id="diff-after-body" class="diff-prose"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- View 2: Story Bible -->
+      <section id="view-bible" class="sheet-view hidden">
+        <div class="sheet-toolbar">
+          <div class="chapter-heading">
+            <h2 class="view-title">故事圣经（Story Bible）</h2>
+          </div>
+          <div class="sheet-controls">
+            <button id="btn-replan" class="btn btn-outline">重新策划设定与大纲</button>
+          </div>
+        </div>
+        <div id="bible-content" class="bible-canvas"></div>
+      </section>
+
+      <!-- View 3: Standalone Anti-AI-Slop Tool -->
+      <section id="view-tool" class="sheet-view hidden">
+        <div class="sheet-toolbar">
+          <div class="chapter-heading">
+            <h2 class="view-title">独立文本去AI味体检与外科精修</h2>
+          </div>
+          <div class="sheet-controls">
+            <select id="tool-genre-select" class="select-input compact" aria-label="选择题材"></select>
+            <button id="btn-tool-sample" class="btn btn-ghost">填入AI味样稿</button>
+            <button id="btn-tool-audit" class="btn btn-outline">毫秒体检</button>
+            <button id="btn-tool-polish" class="btn btn-primary">一键去AI精修</button>
+          </div>
+        </div>
+        <div class="tool-grid">
+          <div class="tool-panel">
+            <label class="field-label" for="tool-input">粘贴任意小说正文（支持中英文）</label>
+            <textarea id="tool-input" class="tool-textarea" placeholder="把任意由 AI 写的章节粘贴到这里，点击「毫秒体检」立即定位每一处 AI 套话、说教结尾和句式僵硬问题…"></textarea>
+          </div>
+          <div class="tool-panel">
+            <div class="tool-result-head">
+              <span class="field-label">红笔体检结果 / 精修对照</span>
+              <span id="tool-score-badge" class="score-pill hidden"></span>
+            </div>
+            <div id="tool-output" class="tool-output">
+              <p class="muted-note">右侧将实时展示红笔划线原文、量化自然度评分，以及精修前后对比。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Right Rail: Red-Pen Editorial Audit Console -->
+    <aside class="sidebar-right">
+      <section class="rail-section">
+        <div class="rail-head">
+          <h2>红笔审校台</h2>
+          <button id="btn-reaudit" class="link-action">重测</button>
+        </div>
+
+        <div id="audit-summary-box" class="audit-scoreboard">
+          <div class="score-main">
+            <div>
+              <div class="score-caption">文笔自然度</div>
+              <div class="score-value" id="metric-humanity">--</div>
+            </div>
+            <span class="grade-stamp" id="metric-grade">-</span>
+          </div>
+          <div class="score-bar-track">
+            <div class="score-bar-fill" id="metric-bar" style="width: 0%"></div>
+          </div>
+          <div class="metrics-mini-grid">
+            <div class="mini-stat">
+              <span>AI味风险</span>
+              <strong id="metric-risk">--</strong>
+            </div>
+            <div class="mini-stat">
+              <span>句式呼吸感</span>
+              <strong id="metric-burst">--</strong>
+            </div>
+            <div class="mini-stat">
+              <span>对话占比</span>
+              <strong id="metric-dialogue">--</strong>
+            </div>
+            <div class="mini-stat">
+              <span>正文字数</span>
+              <strong id="metric-chars">--</strong>
+            </div>
+          </div>
+          <p id="audit-verdict" class="audit-verdict">尚未生成或体检本章正文。</p>
+        </div>
+      </section>
+
+      <section class="rail-section rail-scroll">
+        <div class="rail-head">
+          <h2>红笔批注</h2>
+          <span class="count-tag" id="slop-count">0</span>
+        </div>
+        <div id="slop-issue-list" class="issue-list">
+          <p class="muted-note">暂无 AI 套话或节奏告警。</p>
+        </div>
+
+        <div class="rail-head sub-head">
+          <h2>逻辑与连续性核查</h2>
+          <span class="count-tag" id="continuity-count">0</span>
+        </div>
+        <div id="continuity-issue-list" class="issue-list">
+          <p class="muted-note">精工模式下将自动核验世界观铁律、人物声纹与时间线。</p>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <!-- Modal: New Project -->
+  <div id="modal-new" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-new-title">
+    <div class="modal-card modal-wide">
+      <div class="modal-head">
+        <h3 id="modal-new-title">新建小说项目</h3>
+        <button class="modal-close" data-close="modal-new" aria-label="关闭">&times;</button>
+      </div>
+      <form id="form-new-project" class="modal-body">
+        <div class="form-row">
+          <label class="field-label" for="new-title">书名</label>
+          <input id="new-title" class="text-input" required placeholder="例如：雨夜十五分钟 / 东坡旧药园 / 铁砧七号轨道" />
+        </div>
+
+        <div class="form-row">
+          <label class="field-label">选择题材蓝图（决定叙事节奏、声纹与题材禁词库）</label>
+          <div id="modal-genre-grid" class="genre-picker"></div>
+        </div>
+
+        <div class="form-row">
+          <div class="label-inline">
+            <label class="field-label" for="new-premise">核心故事前提 / 梗概</label>
+            <button type="button" id="btn-fill-sample-premise" class="link-action">填入该题材示例创意</button>
+          </div>
+          <textarea id="new-premise" class="textarea-input" rows="3" required placeholder="用 1~3 句话写清主角处境、核心冲突与开篇事件…"></textarea>
+        </div>
+
+        <div class="form-cols">
+          <div class="form-row">
+            <label class="field-label" for="new-chapters">规划章节数</label>
+            <input id="new-chapters" class="text-input" type="number" min="1" max="100" value="6" />
+          </div>
+          <div class="form-row">
+            <label class="field-label" for="new-words">每章目标字数</label>
+            <input id="new-words" class="text-input" type="number" min="800" max="10000" step="200" value="2800" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label class="field-label" for="new-style">补充文风偏好（可选，点击下方快捷预设）</label>
+          <input id="new-style" class="text-input" placeholder="例如：冷峻白描、对话克制、禁止心理独白说教" />
+          <div class="style-presets" id="style-presets">
+            <button type="button" class="style-pill" data-style="冷峻白描、电影镜头感、强潜台词短对话，绝不抒情说教">冷峻白描</button>
+            <button type="button" class="style-pill" data-style="半白话古典质地、沉着厚重、人物分寸感强，忌现代网络梗">古典沉着</button>
+            <button type="button" class="style-pill" data-style="快节奏强钩子、短句凌厉、冲突密集零水字数">凌厉快节奏</button>
+            <button type="button" class="style-pill" data-style="冰山理论克制留白、重日常物件与气候意象、不替读者总结主题">冰山克制</button>
+          </div>
+        </div>
+
+        <div class="modal-foot">
+          <button type="button" class="btn btn-ghost" data-close="modal-new">取消</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-new">创建并策划故事圣经</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Batch Generate -->
+  <div id="modal-batch" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-batch-title">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3 id="modal-batch-title">连续批量出章</h3>
+        <button class="modal-close" data-close="modal-batch" aria-label="关闭">&times;</button>
+      </div>
+      <form id="form-batch" class="modal-body">
+        <p class="muted-note">系统将按章序依次执行「分镜 → 初稿 → 去AI体检 → 外科精修 → 同步人物与伏笔状态」，确保多章连写不吃书。</p>
+        <div class="form-cols">
+          <div class="form-row">
+            <label class="field-label" for="batch-start">起始章号</label>
+            <input id="batch-start" class="text-input" type="number" min="1" value="1" />
+          </div>
+          <div class="form-row">
+            <label class="field-label" for="batch-end">结束章号</label>
+            <input id="batch-end" class="text-input" type="number" min="1" value="3" />
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="field-label" for="batch-mode">创作模式</label>
+          <select id="batch-mode" class="select-input">
+            <option value="craft">精工模式（全套逻辑审查 + 外科去AI精修，质量最高）</option>
+            <option value="fast">快速模式（仅在 AI 味超标时自动精修，速度最快）</option>
+          </select>
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="btn btn-ghost" data-close="modal-batch">取消</button>
+          <button type="submit" class="btn btn-primary">开始批量生成</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Model Settings -->
+  <div id="modal-settings" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-settings-title">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3 id="modal-settings-title">模型服务设置</h3>
+        <button class="modal-close" data-close="modal-settings" aria-label="关闭">&times;</button>
+      </div>
+      <form id="form-settings" class="modal-body">
+        <div class="form-row">
+          <label class="field-label" for="set-provider">服务商预设</label>
+          <select id="set-provider" class="select-input"></select>
+          <p id="set-provider-hint" class="field-hint"></p>
+        </div>
+        <div class="form-row">
+          <label class="field-label" for="set-apikey">API Key（演示模式或 Ollama 可留空；留空将保留已存密钥）</label>
+          <input id="set-apikey" class="text-input" type="password" autocomplete="off" placeholder="sk-..." />
+        </div>
+        <div class="form-row">
+          <label class="field-label" for="set-baseurl">Base URL（留空使用官方默认地址）</label>
+          <input id="set-baseurl" class="text-input" placeholder="https://api.deepseek.com/v1" />
+        </div>
+        <div class="form-cols">
+          <div class="form-row">
+            <label class="field-label" for="set-model">主力创作模型</label>
+            <input id="set-model" class="text-input" placeholder="如 deepseek-chat / qwen-max" />
+          </div>
+          <div class="form-row">
+            <label class="field-label" for="set-fast-model">辅助快模型（可选）</label>
+            <input id="set-fast-model" class="text-input" placeholder="用于分镜与状态抽取" />
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="btn btn-ghost" data-close="modal-settings">取消</button>
+          <button type="submit" class="btn btn-primary">保存设置</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Busy Overlay & Toast -->
+  <div id="busy-bar" class="busy-bar hidden" role="status" aria-live="polite">
+    <span class="spinner"></span>
+    <span id="busy-text">正在处理中…</span>
+  </div>
+  <div id="toast" class="toast hidden" role="alert"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
